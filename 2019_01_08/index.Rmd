@@ -1,0 +1,101 @@
+---
+title: "TV_Rating_Viz"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+```
+## Get the Data
+```{r}
+raw_data <- read.csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-01-08/IMDb_Economist_tv_ratings.csv")
+summary(raw_data)
+```
+## Cleaning the data
+We want to make sure that R understands the values in the columns. TO do this, we make sure that 
+the dates are understood as dates, not characters.
+
+```{r}
+clean_data <- raw_data %>% mutate(date = ymd(date))
+
+str(clean_data)
+```
+## Descriptive Statistics
+Let's get to know the data a bit better with visualizations and counting.
+```{r}
+clean_data %>% ggplot(aes(x=log(share), y=av_rating)) + geom_point()
+```
+
+```{r}
+clean_data %>% 
+  group_by(titleId, title) %>% 
+  summarise(number_of_seasons = max(seasonNumber)) %>% 
+  arrange(desc(number_of_seasons))
+```
+
+## Extract new data from existing data
+In this case, we want to know which series had higher ratings at the end of their run, 
+than at the beginning.
+In order to work that out, we need to know the rating of the first season and the rating of the 
+lat season. Additionally, we want the number of seasons by counting by counting the occurences of
+a series (because there might be some missing data).
+
+```{r}
+transformed_data <- clean_data %>%
+  group_by(titleId, title) %>%
+  summarise(first_season_rating = av_rating[which.min(seasonNumber)], 
+            last_season_rating = av_rating[which.max(seasonNumber)],
+            first_season_recorded = min(seasonNumber),
+            last_season_recorded = max(seasonNumber),
+            number_of_seasons = n()) %>%
+  mutate(finished_with_higher_rating = first_season_rating < last_season_rating)
+head(transformed_data)
+```
+
+Now let's count how many seasons had higher ratings before than after . . .
+```{r}
+ transformed_data %>% 
+  group_by(finished_with_higher_rating) %>% 
+  count()
+```
+
+```{r}
+transformed_data %>%
+  ggplot() +
+  geom_point(aes(x=first_season_rating, 
+                 y=last_season_rating,colour=finished_with_higher_rating))
+```
+
+
+But in this case we're not excluding data where there are only 1 season, which is skewing our data. We can see this from the straight line of dots (start rating is equal to the end rating).
+So let's exclude those data using `filter`:
+```{r}
+ transformed_data %>% 
+  filter(number_of_seasons > 1) %>% 
+  group_by(finished_with_higher_rating) %>% 
+  count()
+```
+
+```{r}
+transformed_data %>%
+  filter(number_of_seasons > 1) %>%
+  ggplot() +
+    geom_point(aes(x=first_season_rating, y=last_season_rating, colour=finished_with_higher_rating), alpha=0.5) +
+    geom_abline(intercept = 0, slope = 1)
+
+```
+From our rudimentary analysis, it would appear as though more series end with a higher rating than they started.
+
+## Further Analysis
+What movies ended with much worse ratings than when they began?
+```{r}
+worst_performing_series <- transformed_data %>%
+  filter(number_of_seasons > 1) %>%
+  group_by(titleId,title) %>%
+  summarize(drop_in_ratings = last_season_rating - first_season_rating) %>%
+  head(20)
+
+worst_performing_series
+```
