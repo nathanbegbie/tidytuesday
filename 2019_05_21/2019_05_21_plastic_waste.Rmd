@@ -1,0 +1,32 @@
+---
+title: "Plastic Waste Analysis"
+output: html_notebook
+---
+
+## Source and Set Up
+This data and more details can be found [here](https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-05-21).
+
+```{r}
+library(tidyverse)
+```
+
+## Get the data
+
+```{r}
+coast_vs_waste <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-05-21/coastal-population-vs-mismanaged-plastic.csv")
+
+mismanaged_vs_gdp <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-05-21/per-capita-mismanaged-plastic-waste-vs-gdp-per-capita.csv")
+
+waste_vs_gdp <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-05-21/per-capita-plastic-waste-vs-gdp-per-capita.csv")
+```
+
+## Country vs Waste
+
+First, let's take a look at what the top 10 countries are in terms of waste, with a query and then a histogram.
+
+```{r}
+coast_vs_waste %>%
+  filter(Year == 2013) %>% 
+  count(Code)
+```
+
